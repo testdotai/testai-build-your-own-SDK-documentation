@@ -1,0 +1,55 @@
+How to implement a SDK in your own language and framework
+*********************************************************
+
+Requirements
+------------
+To effectively implement a SDK in your own language and framework, you need the ability to make HTTP POST requests, take screenshots and extract bounding boxes from the elements that you want to learn.
+
+Conceptual overview
+--------------------
+The SDK job can be segmented in two main parts:
+ - Ingestion: this is when we take screenshots as a test is running and save them alongside bounding boxes when running a test.
+ - Classification: this is when we trigger the visual AI because the standard selector did not work.
+
+Ingestion
+^^^^^^^^^
+The general flow of ingestion is to basically check if a screenshot of the current page exists in the backend, if not then upload the screenshot and add an action_info for the element.
+We somehow have to generate a label for the element automatically, we don't cover it here, but in general you can use the selector (e.g xpath) as the name.
+
+.. code-block:: python
+
+    def ingest_element(selector, element):
+        screenshot = b64encode(driver.take_screenshot())
+        element_name = generate_element_name_from_selector(selector) # this will become the label for the element in the backend
+        bounding_box = element.bounding_box() # this will become the bounding box for the element in the backend
+        if not check_screenshot_exists(compute_hash(screenshot)):
+            upload_screenshot(screenshot)
+            add_action(element_name, compute_hash(screenshot), bounding_box)
+
+    element = driver.find_element_by_selector/xpath/id/etc(selector)
+    if config.should_ingest_element:
+        ingest_element(selector, element)
+..
+
+Here we use wrappers around the backend API functions (which should be POST requests):
+ - :func:`check_screenshot_exists` wraps :func:`api.v1.backend.check_screenshot_exists` to check if a screenshot already exists in the backend
+ - :func:`upload_screenshot` wraps :func:`api.v1.backend.upload_screenshot` to upload a screenshot to the backend
+ - :func:`add_action` wraps :func:`api.v1.backend.add_action` to add an action to the backend
+
+Classification
+^^^^^^^^^^^^^^
+The idea behind classification is to try and run the standard selector and if it fails to call the backend to visual find the element in the screenshot.
+In the Python SDK for instance, we override the driver methods like this:
+
+.. code-block:: python
+
+    def find_element_by_selector(self, selector):
+        try:
+            element = driver.find_element_by_selector(selector)
+        except NoSuchElementException:
+            # Call the AI backend because the selector is broken
+            element = classify(driver.take_screenshot(), generate_element_name_from_selector(selector))
+        return element
+..
+
+Here we use the function :func:`classify` to classify the element, it is a wrapper around the POST request to :func:`api.v1.backend.classify`.
