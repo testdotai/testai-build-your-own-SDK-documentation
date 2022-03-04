@@ -1,0 +1,153 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>How to support interactive test case creation. &#8212; test.ai SDK API 0.16 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="How to implement a SDK in your own language and framework" href="creating_a_SDK.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="how-to-support-interactive-test-case-creation">
+<h1>How to support interactive test case creation.<a class="headerlink" href="#how-to-support-interactive-test-case-creation" title="Permalink to this headline">¶</a></h1>
+<section id="requirements">
+<h2>Requirements<a class="headerlink" href="#requirements" title="Permalink to this headline">¶</a></h2>
+<p>To effectively this feature into a SDK in your own language and framework, you need the ability to make HTTP POST requests, take screenshots and extract bounding boxes from the elements that you want to learn.</p>
+</section>
+<section id="conceptual-overview">
+<h2>Conceptual overview<a class="headerlink" href="#conceptual-overview" title="Permalink to this headline">¶</a></h2>
+<p>A neat feature of the official Python SDK that you can replicate yourself is the ability to create a test case live. If you have checked the documentation and looked at the interactive video you have an idea of how that works. In short the developer will write a test case comprised only of find_by_element_name so that all the elements they want to interact with have a label, then as they execute the test case, they will be prompted to go into the UI and add a bounding box for each element.</p>
+<dl class="simple">
+<dt>To support this use case, we only need the two functions:</dt><dd><ul class="simple">
+<li><p><code class="xref py py-func docutils literal notranslate"><span class="pre">api.v1.backend.test_case_upload()</span></code></p></li>
+<li><p><code class="xref py py-func docutils literal notranslate"><span class="pre">api.v1.backend.test_case_get_box()</span></code></p></li>
+</ul>
+</dd>
+</dl>
+<p>What we recommend is to trigger the test case creation by passing a flag or env variable to the script.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">process_element_name</span><span class="p">(</span><span class="n">element_name</span><span class="p">,</span> <span class="n">test_case_uuid</span><span class="p">):</span>
+    <span class="kn">import</span> <span class="nn">os</span>
+    <span class="n">test_case_uuid</span> <span class="o">=</span> <span class="s1">&#39;my_test_case&#39;</span>
+    <span class="n">element_name</span> <span class="o">=</span> <span class="s1">&#39;my_element&#39;</span>
+
+    <span class="k">if</span> <span class="n">strtobool</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;TESTAI_INTERACTIVE&#39;</span><span class="p">,</span> <span class="s1">&#39;0&#39;</span><span class="p">))</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">test_case_upload_screenshot</span><span class="p">(</span><span class="n">b64encode</span><span class="p">(</span><span class="n">driver</span><span class="o">.</span><span class="n">take_screenshot</span><span class="p">()),</span> <span class="n">element_name</span><span class="p">)</span>
+        <span class="n">bounding_box</span> <span class="o">=</span> <span class="n">test_case_get_box</span><span class="p">(</span><span class="n">element_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">bounding_box</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">bounding_box</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="s1">&#39;https://sdk.test.ai/test_case/label/&#39;</span> <span class="o">+</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">test_case_uuid</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;No bounding box for </span><span class="si">{</span><span class="n">element_name</span><span class="si">}</span><span class="s1">, please visit </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s1"> to label it&#39;</span><span class="p">)</span>
+            <span class="n">webbrowser</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="c1"># We enter the interative loop waiting for user to label</span>
+                <span class="n">bounding_box</span> <span class="o">=</span> <span class="n">test_case_get_box</span><span class="p">(</span><span class="n">element_name</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">bounding_box</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">bounding_box</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>As you can see the code tries to find a bounding box for the element and keeps waiting until the user enters one.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">test.ai SDK API</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="backend.html">Backend API documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="test_case_functions.html">Backend testcase API documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating_a_SDK.html">How to implement a SDK in your own language and framework</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">How to support interactive test case creation.</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#conceptual-overview">Conceptual overview</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="creating_a_SDK.html" title="previous chapter">How to implement a SDK in your own language and framework</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Etienne DEGUINE (etienne@test.ai), Alexander WU (alec@test.ai), Chris NAVRIDES (chris@test.ai).
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.4.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/api_backend/supporting_interactive_test_case_creation.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
