@@ -48,8 +48,12 @@ In the Python SDK for instance, we override the driver methods like this:
             element = driver.find_element_by_selector(selector)
         except NoSuchElementException:
             # Call the AI backend because the selector is broken
-            element = classify(driver.take_screenshot(), generate_element_name_from_selector(selector))
+            element = classify(b64encode(driver.take_screenshot()), generate_element_name_from_selector(selector))
+            if element is None:
+                log.info('Could not find the element, please adjust your bounding box by going to https://sdk.test.ai/label/%s' % generate_element_name_from_selector(selector))
+                raise NoSuchElementException
         return element
 ..
 
 Here we use the function :func:`classify` to classify the element, it is a wrapper around the POST request to :func:`api.v1.backend.classify`.
+Note when classify fails, it is generally a good idea to prompt the user to add a bounding box to that specific element, they can do so by going to https://sdk.test.ai/label/<element_name>

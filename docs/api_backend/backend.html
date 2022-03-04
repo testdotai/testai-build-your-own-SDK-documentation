@@ -15,7 +15,7 @@
     <script src="../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="How to implement a SDK in your own language and framework" href="creating_a_SDK.html" />
+    <link rel="next" title="Backend testcase API documentation" href="test_case_functions.html" />
     <link rel="prev" title="Welcome to test.ai SDK’s documentation!" href="../index.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
@@ -46,6 +46,8 @@ If the bounding box has never been seen and the label is not frozen, training of
 </dd>
 <dt>Parameters (JSON):</dt><dd><p>Required: ‘key’, ‘api_key’, ‘label’, ‘x’, ‘y’, ‘width’, ‘height’</p>
 </dd>
+<dt>Returns:</dt><dd><p>empty string</p>
+</dd>
 </dl>
 </dd></dl>
 
@@ -62,7 +64,10 @@ If the label is not frozen, the screenshot is also saved and added to the datase
 <dt>Parameters (FORM data: request.form is used on the backend):</dt><dd><p>Required: ‘screenshot’, ‘api_key’, ‘label’</p>
 <p>Optional: ‘source’</p>
 </dd>
-<dt>Returns (JSON):</dt><dd><p>‘success’, ‘key’ (screenshot_uuid), ‘elem’ (bounding box), ‘message’ (additional info)</p>
+<dt>Returns (JSON):</dt><dd><p>success: True if element was found, False otherwise.</p>
+<p>key: screenshot_uuid of the screenshot that was uploaded</p>
+<p>elem: the bounding box for the element</p>
+<p>message: additional info</p>
 </dd>
 </dl>
 </dd></dl>
@@ -78,7 +83,7 @@ If the label is frozen, success is always True (that is necessary for the SDK to
 <dt>Parameters (JSON):</dt><dd><p>Required: ‘screenshot_uuid’, ‘api_key’</p>
 <p>Optional: ‘label’</p>
 </dd>
-<dt>Returns:</dt><dd><p>success: True if screenshot exists or label is frozen, False otherwise</p>
+<dt>Returns (JSON):</dt><dd><p>success: True if screenshot exists or label is frozen, False otherwise</p>
 <p>box (optional): the bounding box if found for that screenshot</p>
 <p>message: additional information such as ‘frozen label’</p>
 </dd>
@@ -88,14 +93,15 @@ If the label is frozen, success is always True (that is necessary for the SDK to
 <dl class="py function">
 <dt class="sig sig-object py" id="api.v1.backend.upload_screenshot">
 <span class="sig-prename descclassname"><span class="pre">api.v1.backend.</span></span><span class="sig-name descname"><span class="pre">upload_screenshot</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.v1.backend.upload_screenshot" title="Permalink to this definition">¶</a></dt>
-<dd><p>Uploads a screenshot to the user’s account and registers it under the given label.</p>
+<dd><p>Uploads a screenshot to the user’s account and registers it under the given label.
+The screenshot needs to be in b64 format.</p>
 <dl>
 <dt>Route:</dt><dd><p>POST /upload_screenshot</p>
 </dd>
 <dt>Parameters (JSON):</dt><dd><p>Required: ‘screenshot’, ‘api_key’, ‘label’</p>
 <p>Optional: ‘screenshot_uuid’ (currently unused), ‘source’ (page source), ‘test_case_uuid’ (to add the screenshot to a test case)</p>
 </dd>
-<dt>Returns:</dt><dd><p>success: True if the screenshot was successfully uploaded, False otherwise</p>
+<dt>Returns: (JSON)</dt><dd><p>success: True if the screenshot was successfully uploaded, False otherwise</p>
 <p>key: The screenshot_uuid.</p>
 </dd>
 </dl>
@@ -123,6 +129,7 @@ If the label is frozen, success is always True (that is necessary for the SDK to
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Backend API documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="test_case_functions.html">Backend testcase API documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="creating_a_SDK.html">How to implement a SDK in your own language and framework</a></li>
 </ul>
 
@@ -131,7 +138,7 @@ If the label is frozen, success is always True (that is necessary for the SDK to
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
       <li>Previous: <a href="../index.html" title="previous chapter">Welcome to test.ai SDK’s documentation!</a></li>
-      <li>Next: <a href="creating_a_SDK.html" title="next chapter">How to implement a SDK in your own language and framework</a></li>
+      <li>Next: <a href="test_case_functions.html" title="next chapter">Backend testcase API documentation</a></li>
   </ul></li>
 </ul>
 </div>

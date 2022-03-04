@@ -15,7 +15,7 @@
     <script src="../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="prev" title="Backend API documentation" href="backend.html" />
+    <link rel="prev" title="Backend testcase API documentation" href="test_case_functions.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -82,11 +82,15 @@ In the Python SDK for instance, we override the driver methods like this:</p>
         <span class="n">element</span> <span class="o">=</span> <span class="n">driver</span><span class="o">.</span><span class="n">find_element_by_selector</span><span class="p">(</span><span class="n">selector</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">NoSuchElementException</span><span class="p">:</span>
         <span class="c1"># Call the AI backend because the selector is broken</span>
-        <span class="n">element</span> <span class="o">=</span> <span class="n">classify</span><span class="p">(</span><span class="n">driver</span><span class="o">.</span><span class="n">take_screenshot</span><span class="p">(),</span> <span class="n">generate_element_name_from_selector</span><span class="p">(</span><span class="n">selector</span><span class="p">))</span>
+        <span class="n">element</span> <span class="o">=</span> <span class="n">classify</span><span class="p">(</span><span class="n">b64encode</span><span class="p">(</span><span class="n">driver</span><span class="o">.</span><span class="n">take_screenshot</span><span class="p">()),</span> <span class="n">generate_element_name_from_selector</span><span class="p">(</span><span class="n">selector</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">element</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Could not find the element, please adjust your bounding box by going to https://sdk.test.ai/label/</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">generate_element_name_from_selector</span><span class="p">(</span><span class="n">selector</span><span class="p">))</span>
+            <span class="k">raise</span> <span class="n">NoSuchElementException</span>
     <span class="k">return</span> <span class="n">element</span>
 </pre></div>
 </div>
-<p>Here we use the function <code class="xref py py-func docutils literal notranslate"><span class="pre">classify()</span></code> to classify the element, it is a wrapper around the POST request to <a class="reference internal" href="backend.html#api.v1.backend.classify" title="api.v1.backend.classify"><code class="xref py py-func docutils literal notranslate"><span class="pre">api.v1.backend.classify()</span></code></a>.</p>
+<p>Here we use the function <code class="xref py py-func docutils literal notranslate"><span class="pre">classify()</span></code> to classify the element, it is a wrapper around the POST request to <a class="reference internal" href="backend.html#api.v1.backend.classify" title="api.v1.backend.classify"><code class="xref py py-func docutils literal notranslate"><span class="pre">api.v1.backend.classify()</span></code></a>.
+Note when classify fails, it is generally a good idea to prompt the user to add a bounding box to that specific element, they can do so by going to <a class="reference external" href="https://sdk.test.ai/label">https://sdk.test.ai/label</a>/&lt;element_name&gt;</p>
 </section>
 </section>
 </section>
@@ -111,6 +115,7 @@ In the Python SDK for instance, we override the driver methods like this:</p>
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="backend.html">Backend API documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="test_case_functions.html">Backend testcase API documentation</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">How to implement a SDK in your own language and framework</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#requirements">Requirements</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#conceptual-overview">Conceptual overview</a></li>
@@ -122,7 +127,7 @@ In the Python SDK for instance, we override the driver methods like this:</p>
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="backend.html" title="previous chapter">Backend API documentation</a></li>
+      <li>Previous: <a href="test_case_functions.html" title="previous chapter">Backend testcase API documentation</a></li>
   </ul></li>
 </ul>
 </div>
