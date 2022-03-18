@@ -10,10 +10,12 @@ Welcome to test.ai SDK's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   api_backend/backend
-   api_backend/test_case_functions
-   api_backend/creating_a_SDK
-   api_backend/supporting_interactive_test_case_creation
+   Base API <api_backend/backend>
+   Interactive API <api_backend/test_case_functions>
+   Custom SDK <api_backend/creating_a_SDK>
+   Interactive testcases <api_backend/supporting_interactive_test_case_creation>
+   Playwright JS example <api_backend/playwright_end_to_end_example.rst>
+   Webdriver JS example <api_backend/webdriver_end_to_end_example.rst>
 
 Indices and tables
 ==================

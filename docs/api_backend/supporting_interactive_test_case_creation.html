@@ -15,6 +15,7 @@
     <script src="../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Playwright end to end example" href="playwright_end_to_end_example.html" />
     <link rel="prev" title="How to implement a SDK in your own language and framework" href="creating_a_SDK.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
@@ -43,8 +44,8 @@
 <p>A neat feature of the official Python SDK that you can replicate yourself is the ability to create a test case live. If you have checked the documentation and looked at the interactive video you have an idea of how that works. In short the developer will write a test case comprised only of find_by_element_name so that all the elements they want to interact with have a label, then as they execute the test case, they will be prompted to go into the UI and add a bounding box for each element.</p>
 <dl class="simple">
 <dt>To support this use case, we only need the two functions:</dt><dd><ul class="simple">
-<li><p><code class="xref py py-func docutils literal notranslate"><span class="pre">api.v1.backend.test_case_upload()</span></code></p></li>
-<li><p><code class="xref py py-func docutils literal notranslate"><span class="pre">api.v1.backend.test_case_get_box()</span></code></p></li>
+<li><p><a class="reference internal" href="test_case_functions.html#api.v1.backend.test_case_upload" title="api.v1.backend.test_case_upload"><code class="xref py py-func docutils literal notranslate"><span class="pre">api.v1.backend.test_case_upload()</span></code></a></p></li>
+<li><p><a class="reference internal" href="test_case_functions.html#api.v1.backend.test_case_get_box" title="api.v1.backend.test_case_get_box"><code class="xref py py-func docutils literal notranslate"><span class="pre">api.v1.backend.test_case_get_box()</span></code></a></p></li>
 </ul>
 </dd>
 </dl>
@@ -94,14 +95,16 @@
 <h3>Navigation</h3>
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="backend.html">Backend API documentation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="test_case_functions.html">Backend testcase API documentation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="creating_a_SDK.html">How to implement a SDK in your own language and framework</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">How to support interactive test case creation.</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="backend.html">Base API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="test_case_functions.html">Interactive API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating_a_SDK.html">Custom SDK</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Interactive testcases</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#requirements">Requirements</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#conceptual-overview">Conceptual overview</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="playwright_end_to_end_example.html">Playwright JS example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="webdriver_end_to_end_example.html">Webdriver JS example</a></li>
 </ul>
 
 <div class="relations">
@@ -109,6 +112,7 @@
 <ul>
   <li><a href="../index.html">Documentation overview</a><ul>
       <li>Previous: <a href="creating_a_SDK.html" title="previous chapter">How to implement a SDK in your own language and framework</a></li>
+      <li>Next: <a href="playwright_end_to_end_example.html" title="next chapter">Playwright end to end example</a></li>
   </ul></li>
 </ul>
 </div>
