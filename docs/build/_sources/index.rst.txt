@@ -1,0 +1,25 @@
+.. test.ai SDK documentation master file, created by
+   sphinx-quickstart on Thu Mar  3 10:32:01 2022.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+Welcome to test.ai SDK's documentation!
+=======================================
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+   Base API <api_backend/backend>
+   Interactive API <api_backend/test_case_functions>
+   Custom SDK <api_backend/creating_a_SDK>
+   Interactive testcases <api_backend/supporting_interactive_test_case_creation>
+   Playwright JS example <api_backend/playwright_end_to_end_example.rst>
+   Webdriver JS example <api_backend/webdriver_end_to_end_example.rst>
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

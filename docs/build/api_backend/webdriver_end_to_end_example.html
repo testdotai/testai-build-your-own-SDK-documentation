@@ -1,0 +1,515 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Webdriver end to end example &#8212; test.ai SDK API 0.16 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Playwright end to end example" href="playwright_end_to_end_example.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="webdriver-end-to-end-example">
+<h1>Webdriver end to end example<a class="headerlink" href="#webdriver-end-to-end-example" title="Permalink to this headline">¶</a></h1>
+<section id="goal">
+<h2>Goal<a class="headerlink" href="#goal" title="Permalink to this headline">¶</a></h2>
+<dl class="simple">
+<dt>Here we give code samples to provide the two main features for a SDK using the <a class="reference external" href="https://webdriver.io/">Webdriver</a> framework  :</dt><dd><ul class="simple">
+<li><p>element ingestion</p></li>
+<li><p>element classification.</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
+<p>We will start with a full code sample with a sample test. Then we will break down each function and explain what they do.</p>
+<section id="end-to-end">
+<h3>End to end<a class="headerlink" href="#end-to-end" title="Permalink to this headline">¶</a></h3>
+<dl class="simple">
+<dt>To run this end to end test, you need to:</dt><dd><ul class="simple">
+<li><p>install webdriver and cross-fetch with <cite>npm install webdriverio</cite> and <cite>npm install cross-fetch</cite></p></li>
+<li><p>save the code under a file like <cite>tests/webdriverio-end-to-end.spec.mjs</cite></p></li>
+<li><p>run the test with <cite>node tests/webdriverio-end-to-end.spec.mjs</cite></p></li>
+</ul>
+</dd>
+</dl>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="k">import</span> <span class="p">{</span><span class="nx">remote</span><span class="p">}</span> <span class="kr">from</span> <span class="s1">&#39;webdriverio&#39;</span><span class="p">;</span>
+<span class="k">import</span> <span class="nx">fs</span> <span class="kr">from</span> <span class="s1">&#39;fs&#39;</span><span class="p">;</span>
+<span class="k">import</span> <span class="nx">fetch</span> <span class="kr">from</span> <span class="s1">&#39;cross-fetch&#39;</span><span class="p">;</span>
+
+<span class="kd">var</span> <span class="nx">api_key</span> <span class="o">=</span> <span class="s1">&#39;&lt;some api key&gt;&#39;</span>
+
+<span class="kd">function</span> <span class="nx">base64_encode</span><span class="p">(</span><span class="nx">file</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// read binary data</span>
+    <span class="kd">var</span> <span class="nx">bitmap</span> <span class="o">=</span> <span class="nx">fs</span><span class="p">.</span><span class="nx">readFileSync</span><span class="p">(</span><span class="nx">file</span><span class="p">);</span>
+    <span class="c1">// convert binary data to base64 encoded string</span>
+    <span class="k">return</span> <span class="ow">new</span> <span class="nx">Buffer</span><span class="p">(</span><span class="nx">bitmap</span><span class="p">).</span><span class="nx">toString</span><span class="p">(</span><span class="s1">&#39;base64&#39;</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">get_bounding_box</span><span class="p">(</span><span class="nx">element</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">location</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">element</span><span class="p">.</span><span class="nx">getLocation</span><span class="p">();</span>
+  <span class="kd">var</span> <span class="nx">size</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">element</span><span class="p">.</span><span class="nx">getSize</span><span class="p">();</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">location</span><span class="p">);</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">size</span><span class="p">);</span>
+  <span class="kd">var</span> <span class="nx">box</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;x&#39;</span><span class="o">:</span> <span class="nx">location</span><span class="p">.</span><span class="nx">x</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="o">:</span> <span class="nx">location</span><span class="p">.</span><span class="nx">y</span><span class="p">,</span> <span class="s1">&#39;width&#39;</span><span class="o">:</span> <span class="nx">size</span><span class="p">.</span><span class="nx">width</span><span class="p">,</span> <span class="s1">&#39;height&#39;</span><span class="o">:</span> <span class="nx">size</span><span class="p">.</span><span class="nx">height</span><span class="p">};</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">box</span><span class="p">);</span>
+  <span class="k">return</span> <span class="nx">box</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">ingest_element</span><span class="p">(</span><span class="nx">browser</span><span class="p">,</span> <span class="nx">playwright_element</span><span class="p">,</span> <span class="nx">label</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">response</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">upload_screenshot</span><span class="p">(</span><span class="nx">browser</span><span class="p">,</span> <span class="nx">label</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">response</span><span class="p">.</span><span class="nx">success</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">screenshot_uuid</span> <span class="o">=</span> <span class="nx">response</span><span class="p">.</span><span class="nx">key</span><span class="p">;</span>
+    <span class="k">await</span> <span class="nx">upload_bounding_box</span><span class="p">(</span><span class="nx">label</span><span class="p">,</span> <span class="nx">screenshot_uuid</span><span class="p">,</span> <span class="nx">playwright_element</span><span class="p">);</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Element ingested&#39;</span><span class="p">);</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="s1">&#39;Failed to upload screenshot to test.ai&#39;</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">upload_screenshot</span><span class="p">(</span><span class="nx">browser</span><span class="p">,</span> <span class="nx">label</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">await</span> <span class="nx">browser</span><span class="p">.</span><span class="nx">saveScreenshot</span><span class="p">(</span><span class="s1">&#39;tmp_screenshot.png&#39;</span><span class="p">);</span>
+  <span class="kd">var</span> <span class="nx">screenshot_b64</span> <span class="o">=</span> <span class="nx">base64_encode</span><span class="p">(</span><span class="s1">&#39;tmp_screenshot.png&#39;</span><span class="p">);</span>
+  <span class="kd">var</span> <span class="nx">dicdata</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;api_key&#39;</span><span class="o">:</span> <span class="nx">api_key</span><span class="p">,</span> <span class="s1">&#39;screenshot&#39;</span><span class="o">:</span> <span class="nx">screenshot_b64</span><span class="p">,</span> <span class="s1">&#39;label&#39;</span><span class="o">:</span> <span class="nx">label</span><span class="p">}</span>
+  <span class="kd">var</span> <span class="nx">url</span> <span class="o">=</span> <span class="s1">&#39;https://sdk.test.ai/upload_screenshot&#39;</span><span class="p">;</span>
+  <span class="kd">const</span> <span class="nx">data</span> <span class="o">=</span> <span class="nb">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">dicdata</span><span class="p">);</span>
+  <span class="kd">var</span> <span class="nx">start</span> <span class="o">=</span> <span class="nx">performance</span><span class="p">.</span><span class="nx">now</span><span class="p">();</span>
+  <span class="kd">var</span> <span class="nx">res</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">fetch</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="p">{</span>
+    <span class="nx">method</span><span class="o">:</span> <span class="s1">&#39;post&#39;</span><span class="p">,</span>
+    <span class="nx">body</span><span class="o">:</span> <span class="nx">data</span><span class="p">,</span>
+    <span class="nx">headers</span><span class="o">:</span> <span class="p">{</span>
+      <span class="s1">&#39;Content-Type&#39;</span><span class="o">:</span> <span class="s1">&#39;application/json&#39;</span>
+    <span class="p">}</span>
+  <span class="p">})</span>
+  <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">response</span> <span class="p">=&gt;</span> <span class="nx">response</span><span class="p">.</span><span class="nx">json</span><span class="p">())</span>
+  <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">data</span> <span class="p">=&gt;</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">data</span>
+  <span class="p">})</span>
+  <span class="p">.</span><span class="k">catch</span><span class="p">(</span><span class="nx">error</span> <span class="p">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="nx">error</span><span class="p">));</span>
+  <span class="kd">var</span> <span class="nx">end</span> <span class="o">=</span> <span class="nx">performance</span><span class="p">.</span><span class="nx">now</span><span class="p">();</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;upload time&#39;</span><span class="p">);</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">end</span><span class="o">-</span><span class="nx">start</span><span class="p">);</span>
+  <span class="k">return</span> <span class="nx">res</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">upload_bounding_box</span><span class="p">(</span><span class="nx">label</span><span class="p">,</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">webdriver_element</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">bounding_box</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">get_bounding_box</span><span class="p">(</span><span class="nx">webdriver_element</span><span class="p">);</span>
+  <span class="kd">var</span> <span class="nx">dicdata</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;key&#39;</span><span class="o">:</span> <span class="nx">key</span><span class="p">,</span>
+    <span class="s1">&#39;api_key&#39;</span><span class="o">:</span> <span class="nx">api_key</span><span class="p">,</span>
+    <span class="s1">&#39;label&#39;</span><span class="o">:</span> <span class="nx">label</span><span class="p">,</span>
+    <span class="s1">&#39;x&#39;</span><span class="o">:</span> <span class="nx">bounding_box</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span> <span class="p">,</span>
+    <span class="s1">&#39;y&#39;</span><span class="o">:</span> <span class="nx">bounding_box</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;width&#39;</span><span class="o">:</span> <span class="nx">bounding_box</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;height&#39;</span><span class="o">:</span> <span class="nx">bounding_box</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;train_if_necessary&#39;</span><span class="o">:</span> <span class="kc">true</span><span class="p">,</span>
+  <span class="p">};</span>
+  <span class="kd">var</span> <span class="nx">url</span> <span class="o">=</span> <span class="s1">&#39;https://sdk.test.ai/add_action&#39;</span><span class="p">;</span>
+  <span class="kd">const</span> <span class="nx">data</span> <span class="o">=</span> <span class="nb">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">dicdata</span><span class="p">);</span>
+  <span class="k">return</span> <span class="k">await</span> <span class="nx">fetch</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="p">{</span>
+    <span class="nx">method</span><span class="o">:</span> <span class="s1">&#39;post&#39;</span><span class="p">,</span>
+    <span class="nx">body</span><span class="o">:</span> <span class="nx">data</span><span class="p">,</span>
+    <span class="nx">headers</span><span class="o">:</span> <span class="p">{</span>
+      <span class="s1">&#39;Content-Type&#39;</span><span class="o">:</span> <span class="s1">&#39;application/json&#39;</span>
+    <span class="p">}</span>
+  <span class="p">})</span>
+  <span class="p">.</span><span class="k">catch</span><span class="p">(</span><span class="nx">error</span> <span class="p">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="nx">error</span><span class="p">));</span>
+<span class="p">}</span>
+
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">find_element_by_element_name</span><span class="p">(</span><span class="nx">browser</span><span class="p">,</span> <span class="nx">label</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">url</span> <span class="o">=</span> <span class="s1">&#39;https://sdk.test.ai/classify&#39;</span><span class="p">;</span>
+  <span class="k">await</span> <span class="nx">browser</span><span class="p">.</span><span class="nx">saveScreenshot</span><span class="p">(</span><span class="s1">&#39;tmp_screenshot.png&#39;</span><span class="p">);</span>
+  <span class="kd">var</span> <span class="nx">screenshot_b64</span> <span class="o">=</span> <span class="nx">base64_encode</span><span class="p">(</span><span class="s1">&#39;tmp_screenshot.png&#39;</span><span class="p">);</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;screenshot&#39;</span><span class="p">)</span>
+  <span class="kd">var</span> <span class="nx">res</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">classify_backend_call</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="nx">screenshot_b64</span><span class="p">,</span> <span class="nx">api_key</span><span class="p">,</span> <span class="nx">label</span><span class="p">);</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">res</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">res</span><span class="p">.</span><span class="nx">success</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">test_ai_elem</span> <span class="o">=</span> <span class="nx">res</span><span class="p">.</span><span class="nx">elem</span><span class="p">;</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;matching&#39;</span><span class="p">)</span>
+    <span class="kd">var</span> <span class="nx">webdriver_elem</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">find_closest_element</span><span class="p">(</span><span class="nx">test_ai_elem</span><span class="p">,</span> <span class="nx">browser</span><span class="p">);</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Successful classification of element &#39;</span> <span class="o">+</span> <span class="nx">label</span><span class="p">);</span>
+    <span class="k">return</span> <span class="nx">webdriver_elem</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="k">throw</span> <span class="s1">&#39;Could not find element, please visit https://sdk.test.ai/label/&#39;</span> <span class="o">+</span> <span class="nx">label</span> <span class="o">+</span> <span class="s1">&#39; to add a bounding box to this screen.&#39;</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">classify_backend_call</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="nx">screenshot_b64</span><span class="p">,</span> <span class="nx">api_key</span><span class="p">,</span> <span class="nx">label</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">dicdata</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;screenshot&#39;</span><span class="o">:</span> <span class="nx">screenshot_b64</span><span class="p">,</span> <span class="s1">&#39;api_key&#39;</span><span class="o">:</span> <span class="nx">api_key</span><span class="p">,</span> <span class="s1">&#39;label&#39;</span><span class="o">:</span> <span class="nx">label</span><span class="p">};</span>
+  <span class="kd">const</span> <span class="nx">data</span> <span class="o">=</span> <span class="ow">new</span> <span class="nx">URLSearchParams</span><span class="p">(</span><span class="nx">dicdata</span><span class="p">);</span>
+  <span class="k">return</span> <span class="k">await</span> <span class="nx">fetch</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="p">{</span>
+    <span class="nx">method</span><span class="o">:</span> <span class="s1">&#39;post&#39;</span><span class="p">,</span>
+    <span class="nx">body</span><span class="o">:</span> <span class="nx">data</span><span class="p">,</span>
+  <span class="p">})</span>
+  <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">response</span> <span class="p">=&gt;</span> <span class="nx">response</span><span class="p">.</span><span class="nx">json</span><span class="p">())</span>
+  <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">data</span> <span class="p">=&gt;</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">data</span>
+  <span class="p">})</span>
+  <span class="p">.</span><span class="k">catch</span><span class="p">(</span><span class="nx">error</span> <span class="p">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="nx">error</span><span class="p">))</span>
+<span class="p">}</span>
+
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">find_closest_element</span><span class="p">(</span><span class="nx">test_ai_elem</span><span class="p">,</span> <span class="nx">browser</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">elements</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">browser</span><span class="p">.</span><span class="nx">$$</span><span class="p">(</span><span class="s1">&#39;//*&#39;</span><span class="p">);</span>
+  <span class="kd">var</span> <span class="nx">best_iou</span> <span class="o">=</span> <span class="mf">0</span><span class="p">;</span>
+  <span class="kd">var</span> <span class="nx">selected</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">elements</span><span class="p">[</span><span class="mf">0</span><span class="p">];</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kd">let</span> <span class="nx">i</span> <span class="o">=</span> <span class="mf">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">elements</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">bbox</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">get_bounding_box</span><span class="p">(</span><span class="nx">elements</span><span class="p">[</span><span class="nx">i</span><span class="p">]);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="nx">bbox</span> <span class="o">!=</span> <span class="kc">null</span><span class="p">)</span> <span class="p">{</span>
+      <span class="kd">var</span> <span class="nx">iou</span> <span class="o">=</span> <span class="nx">_iou_boxes</span><span class="p">(</span><span class="nx">bbox</span><span class="p">,</span> <span class="nx">test_ai_elem</span><span class="p">);</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">iou</span> <span class="o">&gt;</span> <span class="nx">best_iou</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">best_iou</span> <span class="o">=</span> <span class="nx">iou</span><span class="p">;</span>
+        <span class="nx">selected</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">elements</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="nx">selected</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kd">function</span> <span class="nx">_iou_boxes</span><span class="p">(</span><span class="nx">box1</span><span class="p">,</span> <span class="nx">box2</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="nx">_iou</span><span class="p">(</span><span class="nx">box1</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">],</span> <span class="nx">box1</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">],</span> <span class="nx">box1</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">],</span> <span class="nx">box1</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">],</span> <span class="nx">box2</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">],</span> <span class="nx">box2</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">],</span> <span class="nx">box2</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">],</span> <span class="nx">box2</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">]);</span>
+<span class="p">}</span>
+
+<span class="kd">function</span> <span class="nx">_iou</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">,</span> <span class="nx">w</span><span class="p">,</span> <span class="nx">h</span><span class="p">,</span> <span class="nx">xx</span><span class="p">,</span> <span class="nx">yy</span><span class="p">,</span> <span class="nx">ww</span><span class="p">,</span> <span class="nx">hh</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="nx">_area_overlap</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">,</span> <span class="nx">w</span><span class="p">,</span> <span class="nx">h</span><span class="p">,</span> <span class="nx">xx</span><span class="p">,</span> <span class="nx">yy</span><span class="p">,</span> <span class="nx">ww</span><span class="p">,</span> <span class="nx">hh</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span>
+              <span class="nx">_area</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span> <span class="nx">h</span><span class="p">)</span> <span class="o">+</span> <span class="nx">_area</span><span class="p">(</span><span class="nx">ww</span><span class="p">,</span> <span class="nx">hh</span><span class="p">)</span> <span class="o">-</span> <span class="nx">_area_overlap</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">,</span> <span class="nx">w</span><span class="p">,</span> <span class="nx">h</span><span class="p">,</span> <span class="nx">xx</span><span class="p">,</span> <span class="nx">yy</span><span class="p">,</span> <span class="nx">ww</span><span class="p">,</span> <span class="nx">hh</span><span class="p">));}</span>
+
+<span class="kd">function</span> <span class="nx">_area_overlap</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">,</span> <span class="nx">w</span><span class="p">,</span> <span class="nx">h</span><span class="p">,</span> <span class="nx">xx</span><span class="p">,</span> <span class="nx">yy</span><span class="p">,</span> <span class="nx">ww</span><span class="p">,</span> <span class="nx">hh</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">dx</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="nx">x</span> <span class="o">+</span> <span class="nx">w</span><span class="p">,</span> <span class="nx">xx</span> <span class="o">+</span> <span class="nx">ww</span><span class="p">)</span> <span class="o">-</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">max</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">xx</span><span class="p">)</span>
+  <span class="kd">var</span> <span class="nx">dy</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="nx">y</span> <span class="o">+</span> <span class="nx">h</span><span class="p">,</span> <span class="nx">yy</span> <span class="o">+</span> <span class="nx">hh</span><span class="p">)</span> <span class="o">-</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">max</span><span class="p">(</span><span class="nx">y</span><span class="p">,</span> <span class="nx">yy</span><span class="p">)</span>
+  <span class="k">if</span> <span class="p">((</span><span class="nx">dx</span> <span class="o">&gt;=</span> <span class="mf">0</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="p">(</span><span class="nx">dy</span> <span class="o">&gt;=</span> <span class="mf">0</span><span class="p">))</span>  <span class="p">{</span>
+      <span class="k">return</span> <span class="nx">dx</span> <span class="o">*</span> <span class="nx">dy</span> <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="mf">0</span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">function</span> <span class="nx">_area</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span> <span class="nx">h</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="nx">w</span> <span class="o">*</span> <span class="nx">h</span>
+<span class="p">}</span>
+
+
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">test</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">browser</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">remote</span><span class="p">({</span>
+        <span class="nx">capabilities</span><span class="o">:</span> <span class="p">{</span>
+            <span class="nx">browserName</span><span class="o">:</span> <span class="s1">&#39;chrome&#39;</span>
+        <span class="p">}</span>
+    <span class="p">})</span>
+    <span class="k">await</span> <span class="nx">browser</span><span class="p">.</span><span class="nx">url</span><span class="p">(</span><span class="s1">&#39;https://testaistore.com/&#39;</span><span class="p">);</span>
+    <span class="kd">var</span> <span class="nx">menu_link</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">browser</span><span class="p">.</span><span class="nx">$</span><span class="p">(</span><span class="s1">&#39;[id=menu-item-671]&#39;</span><span class="p">);</span>
+    <span class="k">await</span> <span class="nx">ingest_element</span><span class="p">(</span><span class="nx">browser</span><span class="p">,</span> <span class="nx">menu_link</span><span class="p">,</span> <span class="s1">&#39;accessories_nav_link_webdriver&#39;</span><span class="p">);</span>
+    <span class="kd">var</span> <span class="nx">wd_element</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">find_element_by_element_name</span><span class="p">(</span><span class="nx">browser</span><span class="p">,</span> <span class="s1">&#39;accessories_nav_link_webdriver&#39;</span><span class="p">);</span>
+    <span class="k">await</span> <span class="nx">wd_element</span><span class="p">.</span><span class="nx">click</span><span class="p">();</span>
+  <span class="p">};</span>
+
+<span class="k">await</span> <span class="nx">test</span><span class="p">();</span>
+</pre></div>
+</div>
+</section>
+<section id="ingestion">
+<h3>Ingestion<a class="headerlink" href="#ingestion" title="Permalink to this headline">¶</a></h3>
+<dl class="simple">
+<dt>Ingestion consists in the following steps:</dt><dd><ul class="simple">
+<li><p>Upload a screenshot of the current screen by sending a POST request to <a class="reference internal" href="backend.html#api.v1.backend.upload_screenshot" title="api.v1.backend.upload_screenshot"><code class="xref py py-func docutils literal notranslate"><span class="pre">api.v1.backend.upload_screenshot()</span></code></a>. Please note we convert the screenshot to base64, that is a requirement.</p></li>
+<li><p>Extract a bounding box from a Webdriver element</p></li>
+<li><p>Upload the bounding box for that screenshot by sending the uuid we got back from uploading and providing the bounding box coordinates. We do this by sending a POST request to <a class="reference internal" href="backend.html#api.v1.backend.add_action" title="api.v1.backend.add_action"><code class="xref py py-func docutils literal notranslate"><span class="pre">api.v1.backend.add_action()</span></code></a></p></li>
+</ul>
+</dd>
+</dl>
+<p>After an element is ingested, you can check the training status at <a class="reference external" href="https://sdk.test.ai/training_status">https://sdk.test.ai/training_status</a> . You will only be able to call the classify end point for that element once training is finished.</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="k">async</span> <span class="kd">function</span> <span class="nx">ingest_element</span><span class="p">(</span><span class="nx">browser</span><span class="p">,</span> <span class="nx">playwright_element</span><span class="p">,</span> <span class="nx">label</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">response</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">upload_screenshot</span><span class="p">(</span><span class="nx">browser</span><span class="p">,</span> <span class="nx">label</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">response</span><span class="p">.</span><span class="nx">success</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">screenshot_uuid</span> <span class="o">=</span> <span class="nx">response</span><span class="p">.</span><span class="nx">key</span><span class="p">;</span>
+    <span class="k">await</span> <span class="nx">upload_bounding_box</span><span class="p">(</span><span class="nx">label</span><span class="p">,</span> <span class="nx">screenshot_uuid</span><span class="p">,</span> <span class="nx">playwright_element</span><span class="p">);</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Element ingested&#39;</span><span class="p">);</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="s1">&#39;Failed to upload screenshot to test.ai&#39;</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">upload_screenshot</span><span class="p">(</span><span class="nx">browser</span><span class="p">,</span> <span class="nx">label</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">await</span> <span class="nx">browser</span><span class="p">.</span><span class="nx">saveScreenshot</span><span class="p">(</span><span class="s1">&#39;tmp_screenshot.png&#39;</span><span class="p">);</span>
+  <span class="kd">var</span> <span class="nx">screenshot_b64</span> <span class="o">=</span> <span class="nx">base64_encode</span><span class="p">(</span><span class="s1">&#39;tmp_screenshot.png&#39;</span><span class="p">);</span>
+  <span class="kd">var</span> <span class="nx">dicdata</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;api_key&#39;</span><span class="o">:</span> <span class="nx">api_key</span><span class="p">,</span> <span class="s1">&#39;screenshot&#39;</span><span class="o">:</span> <span class="nx">screenshot_b64</span><span class="p">,</span> <span class="s1">&#39;label&#39;</span><span class="o">:</span> <span class="nx">label</span><span class="p">}</span>
+  <span class="kd">var</span> <span class="nx">url</span> <span class="o">=</span> <span class="s1">&#39;https://sdk.test.ai/upload_screenshot&#39;</span><span class="p">;</span>
+  <span class="kd">const</span> <span class="nx">data</span> <span class="o">=</span> <span class="nb">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">dicdata</span><span class="p">);</span>
+  <span class="kd">var</span> <span class="nx">start</span> <span class="o">=</span> <span class="nx">performance</span><span class="p">.</span><span class="nx">now</span><span class="p">();</span>
+  <span class="kd">var</span> <span class="nx">res</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">fetch</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="p">{</span>
+    <span class="nx">method</span><span class="o">:</span> <span class="s1">&#39;post&#39;</span><span class="p">,</span>
+    <span class="nx">body</span><span class="o">:</span> <span class="nx">data</span><span class="p">,</span>
+    <span class="nx">headers</span><span class="o">:</span> <span class="p">{</span>
+      <span class="s1">&#39;Content-Type&#39;</span><span class="o">:</span> <span class="s1">&#39;application/json&#39;</span>
+    <span class="p">}</span>
+  <span class="p">})</span>
+  <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">response</span> <span class="p">=&gt;</span> <span class="nx">response</span><span class="p">.</span><span class="nx">json</span><span class="p">())</span>
+  <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">data</span> <span class="p">=&gt;</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">data</span>
+  <span class="p">})</span>
+  <span class="p">.</span><span class="k">catch</span><span class="p">(</span><span class="nx">error</span> <span class="p">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="nx">error</span><span class="p">));</span>
+  <span class="kd">var</span> <span class="nx">end</span> <span class="o">=</span> <span class="nx">performance</span><span class="p">.</span><span class="nx">now</span><span class="p">();</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;upload time&#39;</span><span class="p">);</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">end</span><span class="o">-</span><span class="nx">start</span><span class="p">);</span>
+  <span class="k">return</span> <span class="nx">res</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">upload_bounding_box</span><span class="p">(</span><span class="nx">label</span><span class="p">,</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">webdriver_element</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">bounding_box</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">get_bounding_box</span><span class="p">(</span><span class="nx">webdriver_element</span><span class="p">);</span>
+  <span class="kd">var</span> <span class="nx">dicdata</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;key&#39;</span><span class="o">:</span> <span class="nx">key</span><span class="p">,</span>
+    <span class="s1">&#39;api_key&#39;</span><span class="o">:</span> <span class="nx">api_key</span><span class="p">,</span>
+    <span class="s1">&#39;label&#39;</span><span class="o">:</span> <span class="nx">label</span><span class="p">,</span>
+    <span class="s1">&#39;x&#39;</span><span class="o">:</span> <span class="nx">bounding_box</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span> <span class="p">,</span>
+    <span class="s1">&#39;y&#39;</span><span class="o">:</span> <span class="nx">bounding_box</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;width&#39;</span><span class="o">:</span> <span class="nx">bounding_box</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;height&#39;</span><span class="o">:</span> <span class="nx">bounding_box</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;train_if_necessary&#39;</span><span class="o">:</span> <span class="kc">true</span><span class="p">,</span>
+  <span class="p">};</span>
+  <span class="kd">var</span> <span class="nx">url</span> <span class="o">=</span> <span class="s1">&#39;https://sdk.test.ai/add_action&#39;</span><span class="p">;</span>
+  <span class="kd">const</span> <span class="nx">data</span> <span class="o">=</span> <span class="nb">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">dicdata</span><span class="p">);</span>
+  <span class="k">return</span> <span class="k">await</span> <span class="nx">fetch</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="p">{</span>
+    <span class="nx">method</span><span class="o">:</span> <span class="s1">&#39;post&#39;</span><span class="p">,</span>
+    <span class="nx">body</span><span class="o">:</span> <span class="nx">data</span><span class="p">,</span>
+    <span class="nx">headers</span><span class="o">:</span> <span class="p">{</span>
+      <span class="s1">&#39;Content-Type&#39;</span><span class="o">:</span> <span class="s1">&#39;application/json&#39;</span>
+    <span class="p">}</span>
+  <span class="p">})</span>
+  <span class="p">.</span><span class="k">catch</span><span class="p">(</span><span class="nx">error</span> <span class="p">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="nx">error</span><span class="p">));</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="classification">
+<h3>Classification<a class="headerlink" href="#classification" title="Permalink to this headline">¶</a></h3>
+<p>Classification consists in visually identifying elements from a screenshot.</p>
+<dl class="simple">
+<dt>The steps are:</dt><dd><ul class="simple">
+<li><p>Upload a screenshot by sending a POST request to <a class="reference internal" href="backend.html#api.v1.backend.classify" title="api.v1.backend.classify"><code class="xref py py-func docutils literal notranslate"><span class="pre">api.v1.backend.classify()</span></code></a>. Please note we convert the screenshot to base64, that is a requirement.</p></li>
+<li><p>Get a bounding box back from the call to <a class="reference internal" href="backend.html#api.v1.backend.classify" title="api.v1.backend.classify"><code class="xref py py-func docutils literal notranslate"><span class="pre">api.v1.backend.classify()</span></code></a></p></li>
+<li><p>Match the bounding box to a Webdriver element by iterating over all elements on the page and finding the one with the best IOU score (intersection over union = area overlap)</p></li>
+<li><p>Return the Webdriver element that was found during matching</p></li>
+</ul>
+</dd>
+</dl>
+<p>This is accomplished by the following code</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="k">async</span> <span class="kd">function</span> <span class="nx">find_element_by_element_name</span><span class="p">(</span><span class="nx">browser</span><span class="p">,</span> <span class="nx">label</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">url</span> <span class="o">=</span> <span class="s1">&#39;https://sdk.test.ai/classify&#39;</span><span class="p">;</span>
+  <span class="k">await</span> <span class="nx">browser</span><span class="p">.</span><span class="nx">saveScreenshot</span><span class="p">(</span><span class="s1">&#39;tmp_screenshot.png&#39;</span><span class="p">);</span>
+  <span class="kd">var</span> <span class="nx">screenshot_b64</span> <span class="o">=</span> <span class="nx">base64_encode</span><span class="p">(</span><span class="s1">&#39;tmp_screenshot.png&#39;</span><span class="p">);</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;screenshot&#39;</span><span class="p">)</span>
+  <span class="kd">var</span> <span class="nx">res</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">classify_backend_call</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="nx">screenshot_b64</span><span class="p">,</span> <span class="nx">api_key</span><span class="p">,</span> <span class="nx">label</span><span class="p">);</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">res</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">res</span><span class="p">.</span><span class="nx">success</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">test_ai_elem</span> <span class="o">=</span> <span class="nx">res</span><span class="p">.</span><span class="nx">elem</span><span class="p">;</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;matching&#39;</span><span class="p">)</span>
+    <span class="kd">var</span> <span class="nx">webdriver_elem</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">find_closest_element</span><span class="p">(</span><span class="nx">test_ai_elem</span><span class="p">,</span> <span class="nx">browser</span><span class="p">);</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Successful classification of element &#39;</span> <span class="o">+</span> <span class="nx">label</span><span class="p">);</span>
+    <span class="k">return</span> <span class="nx">webdriver_elem</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="k">throw</span> <span class="s1">&#39;Could not find element, please visit https://sdk.test.ai/label/&#39;</span> <span class="o">+</span> <span class="nx">label</span> <span class="o">+</span> <span class="s1">&#39; to add a bounding box to this screen.&#39;</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">classify_backend_call</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="nx">screenshot_b64</span><span class="p">,</span> <span class="nx">api_key</span><span class="p">,</span> <span class="nx">label</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">dicdata</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;screenshot&#39;</span><span class="o">:</span> <span class="nx">screenshot_b64</span><span class="p">,</span> <span class="s1">&#39;api_key&#39;</span><span class="o">:</span> <span class="nx">api_key</span><span class="p">,</span> <span class="s1">&#39;label&#39;</span><span class="o">:</span> <span class="nx">label</span><span class="p">};</span>
+  <span class="kd">const</span> <span class="nx">data</span> <span class="o">=</span> <span class="ow">new</span> <span class="nx">URLSearchParams</span><span class="p">(</span><span class="nx">dicdata</span><span class="p">);</span>
+  <span class="k">return</span> <span class="k">await</span> <span class="nx">fetch</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="p">{</span>
+    <span class="nx">method</span><span class="o">:</span> <span class="s1">&#39;post&#39;</span><span class="p">,</span>
+    <span class="nx">body</span><span class="o">:</span> <span class="nx">data</span><span class="p">,</span>
+  <span class="p">})</span>
+  <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">response</span> <span class="p">=&gt;</span> <span class="nx">response</span><span class="p">.</span><span class="nx">json</span><span class="p">())</span>
+  <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">data</span> <span class="p">=&gt;</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">data</span>
+  <span class="p">})</span>
+  <span class="p">.</span><span class="k">catch</span><span class="p">(</span><span class="nx">error</span> <span class="p">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="nx">error</span><span class="p">))</span>
+<span class="p">}</span>
+
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">find_closest_element</span><span class="p">(</span><span class="nx">test_ai_elem</span><span class="p">,</span> <span class="nx">browser</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">elements</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">browser</span><span class="p">.</span><span class="nx">$$</span><span class="p">(</span><span class="s1">&#39;//*&#39;</span><span class="p">);</span>
+  <span class="kd">var</span> <span class="nx">best_iou</span> <span class="o">=</span> <span class="mf">0</span><span class="p">;</span>
+  <span class="kd">var</span> <span class="nx">selected</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">elements</span><span class="p">[</span><span class="mf">0</span><span class="p">];</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kd">let</span> <span class="nx">i</span> <span class="o">=</span> <span class="mf">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">elements</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">bbox</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">get_bounding_box</span><span class="p">(</span><span class="nx">elements</span><span class="p">[</span><span class="nx">i</span><span class="p">]);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="nx">bbox</span> <span class="o">!=</span> <span class="kc">null</span><span class="p">)</span> <span class="p">{</span>
+      <span class="kd">var</span> <span class="nx">iou</span> <span class="o">=</span> <span class="nx">_iou_boxes</span><span class="p">(</span><span class="nx">bbox</span><span class="p">,</span> <span class="nx">test_ai_elem</span><span class="p">);</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">iou</span> <span class="o">&gt;</span> <span class="nx">best_iou</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">best_iou</span> <span class="o">=</span> <span class="nx">iou</span><span class="p">;</span>
+        <span class="nx">selected</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">elements</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="nx">selected</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kd">function</span> <span class="nx">_iou_boxes</span><span class="p">(</span><span class="nx">box1</span><span class="p">,</span> <span class="nx">box2</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="nx">_iou</span><span class="p">(</span><span class="nx">box1</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">],</span> <span class="nx">box1</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">],</span> <span class="nx">box1</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">],</span> <span class="nx">box1</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">],</span> <span class="nx">box2</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">],</span> <span class="nx">box2</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">],</span> <span class="nx">box2</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">],</span> <span class="nx">box2</span><span class="p">[</span><span class="s1">&#39;height&#39;</span><span class="p">]);</span>
+<span class="p">}</span>
+
+<span class="kd">function</span> <span class="nx">_iou</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">,</span> <span class="nx">w</span><span class="p">,</span> <span class="nx">h</span><span class="p">,</span> <span class="nx">xx</span><span class="p">,</span> <span class="nx">yy</span><span class="p">,</span> <span class="nx">ww</span><span class="p">,</span> <span class="nx">hh</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="nx">_area_overlap</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">,</span> <span class="nx">w</span><span class="p">,</span> <span class="nx">h</span><span class="p">,</span> <span class="nx">xx</span><span class="p">,</span> <span class="nx">yy</span><span class="p">,</span> <span class="nx">ww</span><span class="p">,</span> <span class="nx">hh</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span>
+              <span class="nx">_area</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span> <span class="nx">h</span><span class="p">)</span> <span class="o">+</span> <span class="nx">_area</span><span class="p">(</span><span class="nx">ww</span><span class="p">,</span> <span class="nx">hh</span><span class="p">)</span> <span class="o">-</span> <span class="nx">_area_overlap</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">,</span> <span class="nx">w</span><span class="p">,</span> <span class="nx">h</span><span class="p">,</span> <span class="nx">xx</span><span class="p">,</span> <span class="nx">yy</span><span class="p">,</span> <span class="nx">ww</span><span class="p">,</span> <span class="nx">hh</span><span class="p">));}</span>
+
+<span class="kd">function</span> <span class="nx">_area_overlap</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">,</span> <span class="nx">w</span><span class="p">,</span> <span class="nx">h</span><span class="p">,</span> <span class="nx">xx</span><span class="p">,</span> <span class="nx">yy</span><span class="p">,</span> <span class="nx">ww</span><span class="p">,</span> <span class="nx">hh</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">dx</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="nx">x</span> <span class="o">+</span> <span class="nx">w</span><span class="p">,</span> <span class="nx">xx</span> <span class="o">+</span> <span class="nx">ww</span><span class="p">)</span> <span class="o">-</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">max</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">xx</span><span class="p">)</span>
+  <span class="kd">var</span> <span class="nx">dy</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="nx">y</span> <span class="o">+</span> <span class="nx">h</span><span class="p">,</span> <span class="nx">yy</span> <span class="o">+</span> <span class="nx">hh</span><span class="p">)</span> <span class="o">-</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">max</span><span class="p">(</span><span class="nx">y</span><span class="p">,</span> <span class="nx">yy</span><span class="p">)</span>
+  <span class="k">if</span> <span class="p">((</span><span class="nx">dx</span> <span class="o">&gt;=</span> <span class="mf">0</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="p">(</span><span class="nx">dy</span> <span class="o">&gt;=</span> <span class="mf">0</span><span class="p">))</span>  <span class="p">{</span>
+      <span class="k">return</span> <span class="nx">dx</span> <span class="o">*</span> <span class="nx">dy</span> <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="mf">0</span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">function</span> <span class="nx">_area</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span> <span class="nx">h</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="nx">w</span> <span class="o">*</span> <span class="nx">h</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="notes">
+<h3>Notes<a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h3>
+<p>The part where we match a bounding box to a Webdriver element is non-trivial, and depending on your needs could be side-stepped. If you want to skip it and you have the ability to click directly at coordinates x, y you can do something like the code sample below.
+Please note you need to configure your test to use devtools (Chrome CDP) cf <a class="reference external" href="https://webdriver.io/docs/devtools-service">Webdriver doc</a></p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="k">async</span> <span class="kd">function</span> <span class="nx">find_testai_element_by_element_name</span><span class="p">(</span><span class="nx">browser</span><span class="p">,</span> <span class="nx">label</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">url</span> <span class="o">=</span> <span class="s1">&#39;https://sdk.test.ai/classify&#39;</span><span class="p">;</span>
+  <span class="k">await</span> <span class="nx">browser</span><span class="p">.</span><span class="nx">saveScreenshot</span><span class="p">(</span><span class="s1">&#39;tmp_screenshot.png&#39;</span><span class="p">);</span>
+  <span class="kd">var</span> <span class="nx">screenshot_b64</span> <span class="o">=</span> <span class="nx">base64_encode</span><span class="p">(</span><span class="s1">&#39;tmp_screenshot.png&#39;</span><span class="p">);</span>
+  <span class="kd">var</span> <span class="nx">res</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">classify_backend_call</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="nx">screenshot_b64</span><span class="p">,</span> <span class="nx">api_key</span><span class="p">,</span> <span class="nx">label</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">res</span><span class="p">.</span><span class="nx">success</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">test_ai_elem</span> <span class="o">=</span> <span class="nx">res</span><span class="p">.</span><span class="nx">elem</span><span class="p">;</span>
+    <span class="k">return</span> <span class="nx">test_ai_elem</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="k">throw</span> <span class="s1">&#39;Could not find element&#39;</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">coordinate_click</span><span class="p">(</span><span class="nx">browser</span><span class="p">,</span> <span class="nx">testai_elem</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;clicking&#39;</span><span class="p">)</span>
+  <span class="kd">var</span> <span class="nx">x</span> <span class="o">=</span> <span class="nx">testai_elem</span><span class="p">.</span><span class="nx">x</span> <span class="o">+</span> <span class="nx">testai_elem</span><span class="p">.</span><span class="nx">width</span> <span class="o">/</span> <span class="mf">2</span><span class="p">;</span>
+  <span class="kd">var</span> <span class="nx">y</span> <span class="o">=</span> <span class="nx">testai_elem</span><span class="p">.</span><span class="nx">y</span> <span class="o">+</span> <span class="nx">testai_elem</span><span class="p">.</span><span class="nx">height</span> <span class="o">/</span> <span class="mf">2</span><span class="p">;</span>
+  <span class="k">await</span> <span class="nx">browser</span><span class="p">.</span><span class="nx">cdp</span><span class="p">(</span><span class="s1">&#39;Input&#39;</span><span class="p">,</span> <span class="s1">&#39;dispatchMouseEvent&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="o">:</span> <span class="s1">&#39;mousePressed&#39;</span><span class="p">,</span> <span class="s1">&#39;button&#39;</span><span class="o">:</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;clickCount&#39;</span><span class="o">:</span> <span class="mf">1</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="o">:</span> <span class="nx">x</span> <span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="o">:</span> <span class="nx">y</span><span class="p">})</span>
+  <span class="k">await</span> <span class="ow">new</span> <span class="nb">Promise</span><span class="p">(</span><span class="nx">r</span> <span class="p">=&gt;</span> <span class="nx">setTimeout</span><span class="p">(</span><span class="nx">r</span><span class="p">,</span> <span class="mf">50</span><span class="p">));</span>
+  <span class="k">await</span> <span class="nx">browser</span><span class="p">.</span><span class="nx">cdp</span><span class="p">(</span><span class="s1">&#39;Input&#39;</span><span class="p">,</span> <span class="s1">&#39;dispatchMouseEvent&#39;</span><span class="p">,</span> <span class="p">{</span> <span class="s1">&#39;type&#39;</span><span class="o">:</span> <span class="s1">&#39;mouseReleased&#39;</span><span class="p">,</span> <span class="s1">&#39;button&#39;</span><span class="o">:</span> <span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;clickCount&#39;</span><span class="o">:</span> <span class="mf">1</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="o">:</span> <span class="nx">x</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="o">:</span> <span class="nx">y</span><span class="p">})</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;clicked&#39;</span><span class="p">);</span>
+<span class="p">}</span>
+
+
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">test</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">browser</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">remote</span><span class="p">({</span>
+        <span class="nx">capabilities</span><span class="o">:</span> <span class="p">{</span>
+            <span class="nx">browserName</span><span class="o">:</span> <span class="s1">&#39;chrome&#39;</span>
+        <span class="p">},</span>
+    <span class="p">})</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="k">await</span> <span class="nx">browser</span><span class="p">.</span><span class="nx">getMetrics</span><span class="p">())</span>
+    <span class="k">await</span> <span class="nx">browser</span><span class="p">.</span><span class="nx">url</span><span class="p">(</span><span class="s1">&#39;https://testaistore.com/&#39;</span><span class="p">);</span>
+
+    <span class="kd">var</span> <span class="nx">testai_elem</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">find_testai_element_by_element_name</span><span class="p">(</span><span class="nx">browser</span><span class="p">,</span> <span class="s1">&#39;accessories_nav_link_webdriver&#39;</span><span class="p">);</span>
+    <span class="k">await</span> <span class="nx">coordinate_click</span><span class="p">(</span><span class="nx">browser</span><span class="p">,</span> <span class="nx">testai_elem</span><span class="p">);</span>
+
+  <span class="p">};</span>
+
+<span class="k">await</span> <span class="nx">test</span><span class="p">();</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">test.ai SDK API</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="backend.html">Base API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="test_case_functions.html">Interactive API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating_a_SDK.html">Custom SDK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="supporting_interactive_test_case_creation.html">Interactive testcases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="playwright_end_to_end_example.html">Playwright JS example</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Webdriver JS example</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#goal">Goal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="playwright_end_to_end_example.html" title="previous chapter">Playwright end to end example</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Etienne DEGUINE (etienne@test.ai), Alexander WU (alec@test.ai), Chris NAVRIDES (chris@test.ai).
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.4.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/api_backend/webdriver_end_to_end_example.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,390 @@
+Playwright end to end example
+*****************************
+
+Goal
+----
+Here we give code samples to provide the two main features for a SDK using the `Playwright <https://playwright.dev/>`_ framework  :
+ - element ingestion
+ - element classification.
+
+Overview
+--------
+We will start with a full code sample with a sample test. Then we will break down each function and explain what they do.
+
+End to end
+^^^^^^^^^^
+
+To run this end to end test, you need to:
+ - install Playwright and cross-fetch with `npm install playwright` and `npm install cross-fetch`
+ - save the code under a file like `tests/playwright-end-to-end.spec.mjs`
+ - run the test with `node tests/playwright-end-to-end.spec.mjs`
+
+.. code-block:: javascript
+
+    import {chromium} from 'playwright';
+    import fetch from 'cross-fetch';
+
+    var api_key = '<some api key>'
+
+    async function upload_screenshot(page, label) {
+      var screenshot_b64 = (await page.screenshot()).toString('base64');
+      var dicdata = {'api_key': api_key, 'screenshot': screenshot_b64, 'label': label}
+      var url = 'https://sdk.test.ai/upload_screenshot';
+      const data = JSON.stringify(dicdata);
+      return await fetch(url, {
+        method: 'post',
+        body: data,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        return data
+      })
+      .catch(error => console.error(error));
+    }
+
+    async function upload_bounding_box(label, key, playwright_element) {
+      var bounding_box = await playwright_element.boundingBox();
+      var dicdata = {
+        'key': key,
+        'api_key': api_key,
+        'label': label,
+        'x': bounding_box['x'] ,
+        'y': bounding_box['y'],
+        'width': bounding_box['width'],
+        'height': bounding_box['height'],
+        'train_if_necessary': true,
+      };
+      var url = 'https://sdk.test.ai/add_action';
+      const data = JSON.stringify(dicdata);
+      return await fetch(url, {
+        method: 'post',
+        body: data,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .catch(error => console.error(error));
+    }
+
+    async function ingest_element(page, playwright_element, label) {
+      // First upload a screenshot
+      var response = await upload_screenshot(page, label);
+      if (response.success) {
+        var screenshot_uuid = response.key;
+        await upload_bounding_box(label, screenshot_uuid, playwright_element);
+        console.log('Element ingested');
+      } else {
+        console.error('Failed to upload screenshot to test.ai');
+      }
+    }
+
+    async function find_element_by_element_name(page, label) {
+      var url = 'https://sdk.test.ai/classify';
+      var screenshot_b64 = (await page.screenshot()).toString('base64');
+      var res = await classify_backend_call(url, screenshot_b64, api_key, label);
+      if (res.success) {
+        var test_ai_elem = res.elem;
+        var playwright_elem = await find_closest_element(test_ai_elem, page);
+        console.log('Successful classification of element ' + label);
+        return playwright_elem;
+      } else {
+        throw 'Could not find element, please visit https://sdk.test.ai/label/' + label + ' to add a bounding box to this screen.';
+      }
+    }
+
+    async function classify_backend_call(url, screenshot_b64, api_key, label) {
+      var dicdata = {'screenshot': screenshot_b64, 'api_key': api_key, 'label': label};
+      const data = new URLSearchParams(dicdata);
+      return await fetch(url, {
+        method: 'post',
+        body: data,
+      })
+      .then(response => response.json())
+      .then(data => {
+        return data
+      })
+      .catch(error => console.error(error))
+    }
+
+    async function find_closest_element(test_ai_elem, page) {
+      var elements = await page.$$('//*');
+      var best_iou = 0;
+      var selected = await elements[0];
+      for (let i = 0; i < elements.length; i++) {
+        var bbox = await elements[i].boundingBox();
+
+        if (bbox != null) {
+          var iou = _iou_boxes(bbox, test_ai_elem);
+          if (iou > best_iou) {
+            best_iou = iou;
+            selected = await elements[i];
+          }
+        }
+      }
+      return selected;
+    }
+
+    function _iou_boxes(box1, box2) {
+      return _iou(box1['x'], box1['y'], box1['width'], box1['height'], box2['x'], box2['y'], box2['width'], box2['height']);
+    }
+
+    function _iou(x, y, w, h, xx, yy, ww, hh) {
+      return _area_overlap(x, y, w, h, xx, yy, ww, hh) / (
+                  _area(w, h) + _area(ww, hh) - _area_overlap(x, y, w, h, xx, yy, ww, hh));}
+
+    function _area_overlap(x, y, w, h, xx, yy, ww, hh) {
+      var dx = Math.min(x + w, xx + ww) - Math.max(x, xx)
+      var dy = Math.min(y + h, yy + hh) - Math.max(y, yy)
+      if ((dx >= 0) && (dy >= 0))  {
+          return dx * dy } else {
+          return 0}
+    }
+
+    function _area(w, h) {
+      return w * h
+    }
+
+
+    async function find_testai_element_by_element_name(page, label) {
+      var url = 'https://sdk.test.ai/classify';
+      var screenshot_b64 = (await page.screenshot()).toString('base64');
+      var res = await classify_backend_call(url, screenshot_b64, api_key, label);
+      if (res.success) {
+        var test_ai_elem = res.elem;
+        return test_ai_elem;
+      } else {
+        throw 'Could not find element';
+      }
+    }
+
+    async function coordinate_click(page, testai_elem) {
+      var client = await page.context().newCDPSession(page);
+      console.log('clicking')
+      var x = testai_elem.x + testai_elem.width / 2;
+      var y = testai_elem.y + testai_elem.height / 2;
+      await client.send('Input.dispatchMouseEvent', {'type': 'mousePressed', 'button': 'left', 'clickCount': 1, 'x': x , 'y': y})
+      await new Promise(r => setTimeout(r, 50));
+      await client.send('Input.dispatchMouseEvent', { 'type': 'mouseReleased', 'button': 'left', 'clickCount': 1, 'x': x, 'y': y})
+      console.log('clicked');
+    }
+
+    async function test() {
+      var browser = await chromium.launch({ headless: false });
+      var page = await browser.newPage();
+      await page.goto('https://testaistore.com/');
+
+      // ingest the link for accessories
+      var menu_link = await page.$('[id=menu-item-671]');
+      await ingest_element(page, menu_link, 'accessories_nav_link');
+
+      // classify an element that has already been ingested and classifier trained
+      var pw_element = await find_element_by_element_name(page, 'store_nav_link');
+      await pw_element.click();
+
+      var testai_elem = await find_testai_element_by_element_name(page, 'accessories_nav_link');
+      await coordinate_click(page, testai_elem);
+      //await browser.close();
+    };
+
+    await test();
+..
+
+Ingestion
+^^^^^^^^^
+
+Ingestion consists in the following steps:
+ - Upload a screenshot of the current screen by sending a POST request to :func:`api.v1.backend.upload_screenshot`. Please note we convert the screenshot to base64, that is a requirement.
+ - Extract a bounding box from a Playwright element
+ - Upload the bounding box for that screenshot by sending the uuid we got back from uploading and providing the bounding box coordinates. We do this by sending a POST request to :func:`api.v1.backend.add_action`
+
+After an element is ingested, you can check the training status at https://sdk.test.ai/training_status . You will only be able to call the classify end point for that element once training is finished.
+
+.. code-block:: javascript
+
+    import {chromium} from 'playwright';
+    import fetch from 'cross-fetch';
+
+    var api_key = '<some api key>'
+
+    async function ingest_element(page, playwright_element, label) {
+      // First upload a screenshot
+      var response = await upload_screenshot(page, label);
+      if (response.success) {
+        var screenshot_uuid = response.key;
+        // Then upload the bounding box
+        await upload_bounding_box(label, screenshot_uuid, playwright_element);
+        console.log('Element ingested');
+      } else {
+        console.error('Failed to upload screenshot to test.ai');
+      }
+    }
+    async function upload_screenshot(page, label) {
+      var screenshot_b64 = (await page.screenshot()).toString('base64');
+      var dicdata = {'api_key': api_key, 'screenshot': screenshot_b64, 'label': label}
+      var url = 'https://sdk.test.ai/upload_screenshot';
+      const data = JSON.stringify(dicdata);
+      return await fetch(url, {
+        method: 'post',
+        body: data,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        return data
+      })
+      .catch(error => console.error(error));
+    }
+
+    async function upload_bounding_box(label, key, playwright_element) {
+      var bounding_box = await playwright_element.boundingBox();
+      var dicdata = {
+        'key': key,
+        'api_key': api_key,
+        'label': label,
+        'x': bounding_box['x'] ,
+        'y': bounding_box['y'],
+        'width': bounding_box['width'],
+        'height': bounding_box['height'],
+        'train_if_necessary': true,
+      };
+      var url = 'https://sdk.test.ai/add_action';
+      const data = JSON.stringify(dicdata);
+      return await fetch(url, {
+        method: 'post',
+        body: data,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .catch(error => console.error(error));
+    }
+
+..
+
+Classification
+^^^^^^^^^^^^^^
+Classification consists in visually identifying elements from a screenshot.
+
+The steps are:
+ - Upload a screenshot by sending a POST request to :func:`api.v1.backend.classify`. Please note we convert the screenshot to base64, that is a requirement.
+ - Get a bounding box back from the call to :func:`api.v1.backend.classify`
+ - Match the bounding box to a Playwright element by iterating over all elements on the page and finding the one with the best IOU score (intersection over union = area overlap)
+ - Return the Playwright element that was found during matching
+
+This is accomplished by the following code
+
+.. code-block:: javascript
+
+    async function find_element_by_element_name(page, label) {
+      var url = 'https://sdk.test.ai/classify';
+      var screenshot_b64 = (await page.screenshot()).toString('base64');
+      var res = await classify_backend_call(url, screenshot_b64, api_key, label);
+      if (res.success) {
+        var test_ai_elem = res.elem;
+        var playwright_elem = await find_closest_element(test_ai_elem, page);
+        console.log('Successful classification of element ' + label);
+        return playwright_elem;
+      } else {
+        throw 'Could not find element, please visit https://sdk.test.ai/label/' + label + ' to add a bounding box to this screen.';
+      }
+    }
+
+    async function classify_backend_call(url, screenshot_b64, api_key, label) {
+      var dicdata = {'screenshot': screenshot_b64, 'api_key': api_key, 'label': label};
+      const data = new URLSearchParams(dicdata);
+      return await fetch(url, {
+        method: 'post',
+        body: data,
+      })
+      .then(response => response.json())
+      .then(data => {
+        return data
+      })
+      .catch(error => console.error(error))
+    }
+
+    async function find_closest_element(test_ai_elem, page) {
+      var elements = await page.$$('//*');
+      var best_iou = 0;
+      var selected = await elements[0];
+      for (let i = 0; i < elements.length; i++) {
+        var bbox = await elements[i].boundingBox();
+
+        if (bbox != null) {
+          var iou = _iou_boxes(bbox, test_ai_elem);
+          if (iou > best_iou) {
+            best_iou = iou;
+            selected = await elements[i];
+          }
+        }
+      }
+      return selected;
+    }
+
+    function _iou_boxes(box1, box2) {
+      return _iou(box1['x'], box1['y'], box1['width'], box1['height'], box2['x'], box2['y'], box2['width'], box2['height']);
+    }
+
+    function _iou(x, y, w, h, xx, yy, ww, hh) {
+      return _area_overlap(x, y, w, h, xx, yy, ww, hh) / (
+                  _area(w, h) + _area(ww, hh) - _area_overlap(x, y, w, h, xx, yy, ww, hh));}
+
+    function _area_overlap(x, y, w, h, xx, yy, ww, hh) {
+      var dx = Math.min(x + w, xx + ww) - Math.max(x, xx)
+      var dy = Math.min(y + h, yy + hh) - Math.max(y, yy)
+      if ((dx >= 0) && (dy >= 0))  {
+          return dx * dy } else {
+          return 0}
+    }
+
+    function _area(w, h) {
+      return w * h
+    }
+
+..
+
+Notes
+^^^^^
+
+The part where we match a bounding box to a Playwright element is non-trivial, and depending on your needs could be side-stepped. On a typical page we timed it at around 0.5s. If you want to skip it and you have the ability to click directly at coordinates x, y you can do something like the code sample below.
+
+.. code-block:: javascript
+
+    async function find_testai_element_by_element_name(page, label) {
+      var url = 'https://sdk.test.ai/classify';
+      var screenshot_b64 = (await page.screenshot()).toString('base64');
+      var res = await classify_backend_call(url, screenshot_b64, api_key, label);
+      if (res.success) {
+        var test_ai_elem = res.elem;
+        return test_ai_elem;
+      } else {
+        throw 'Could not find element';
+      }
+    }
+
+    async function coordinate_click(page, testai_elem) {
+      var client = await page.context().newCDPSession(page);
+      console.log('clicking')
+      var x = testai_elem.x + testai_elem.width / 2;
+      var y = testai_elem.y + testai_elem.height / 2;
+      await client.send('Input.dispatchMouseEvent', {'type': 'mousePressed', 'button': 'left', 'clickCount': 1, 'x': x , 'y': y})
+      await new Promise(r => setTimeout(r, 50));
+      await client.send('Input.dispatchMouseEvent', { 'type': 'mouseReleased', 'button': 'left', 'clickCount': 1, 'x': x, 'y': y})
+      console.log('clicked');
+    }
+
+    async function test() {
+      var browser = await chromium.launch({ headless: false });
+      var page = await browser.newPage();
+      await page.goto('https://testaistore.com/');
+
+      var testai_elem = await find_testai_element_by_element_name(page, 'accessories_nav_link');
+      await coordinate_click(page, testai_elem);
+      //await browser.close();
+    };
+..

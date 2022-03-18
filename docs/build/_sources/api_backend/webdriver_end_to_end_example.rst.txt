@@ -1,0 +1,402 @@
+Webdriver end to end example
+****************************
+
+Goal
+----
+Here we give code samples to provide the two main features for a SDK using the `Webdriver <https://webdriver.io/>`_ framework  :
+ - element ingestion
+ - element classification.
+
+Overview
+--------
+We will start with a full code sample with a sample test. Then we will break down each function and explain what they do.
+
+End to end
+^^^^^^^^^^
+
+To run this end to end test, you need to:
+ - install webdriver and cross-fetch with `npm install webdriverio` and `npm install cross-fetch`
+ - save the code under a file like `tests/webdriverio-end-to-end.spec.mjs`
+ - run the test with `node tests/webdriverio-end-to-end.spec.mjs`
+
+.. code-block:: javascript
+
+    import {remote} from 'webdriverio';
+    import fs from 'fs';
+    import fetch from 'cross-fetch';
+
+    var api_key = '<some api key>'
+
+    function base64_encode(file) {
+        // read binary data
+        var bitmap = fs.readFileSync(file);
+        // convert binary data to base64 encoded string
+        return new Buffer(bitmap).toString('base64');
+    }
+
+    async function get_bounding_box(element) {
+      var location = await element.getLocation();
+      var size = await element.getSize();
+      console.log(location);
+      console.log(size);
+      var box = {'x': location.x, 'y': location.y, 'width': size.width, 'height': size.height};
+      console.log(box);
+      return box;
+    }
+
+    async function ingest_element(browser, playwright_element, label) {
+      var response = await upload_screenshot(browser, label);
+      if (response.success) {
+        var screenshot_uuid = response.key;
+        await upload_bounding_box(label, screenshot_uuid, playwright_element);
+        console.log('Element ingested');
+      } else {
+        console.error('Failed to upload screenshot to test.ai');
+      }
+    }
+
+    async function upload_screenshot(browser, label) {
+      await browser.saveScreenshot('tmp_screenshot.png');
+      var screenshot_b64 = base64_encode('tmp_screenshot.png');
+      var dicdata = {'api_key': api_key, 'screenshot': screenshot_b64, 'label': label}
+      var url = 'https://sdk.test.ai/upload_screenshot';
+      const data = JSON.stringify(dicdata);
+      var start = performance.now();
+      var res = await fetch(url, {
+        method: 'post',
+        body: data,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        return data
+      })
+      .catch(error => console.error(error));
+      var end = performance.now();
+      console.log('upload time');
+      console.log(end-start);
+      return res;
+    }
+
+    async function upload_bounding_box(label, key, webdriver_element) {
+      var bounding_box = await get_bounding_box(webdriver_element);
+      var dicdata = {
+        'key': key,
+        'api_key': api_key,
+        'label': label,
+        'x': bounding_box['x'] ,
+        'y': bounding_box['y'],
+        'width': bounding_box['width'],
+        'height': bounding_box['height'],
+        'train_if_necessary': true,
+      };
+      var url = 'https://sdk.test.ai/add_action';
+      const data = JSON.stringify(dicdata);
+      return await fetch(url, {
+        method: 'post',
+        body: data,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .catch(error => console.error(error));
+    }
+
+    async function find_element_by_element_name(browser, label) {
+      var url = 'https://sdk.test.ai/classify';
+      await browser.saveScreenshot('tmp_screenshot.png');
+      var screenshot_b64 = base64_encode('tmp_screenshot.png');
+      console.log('screenshot')
+      var res = await classify_backend_call(url, screenshot_b64, api_key, label);
+      console.log(res);
+      if (res.success) {
+        var test_ai_elem = res.elem;
+        console.log('matching')
+        var webdriver_elem = await find_closest_element(test_ai_elem, browser);
+        console.log('Successful classification of element ' + label);
+        return webdriver_elem;
+      } else {
+        throw 'Could not find element, please visit https://sdk.test.ai/label/' + label + ' to add a bounding box to this screen.';
+      }
+    }
+
+    async function classify_backend_call(url, screenshot_b64, api_key, label) {
+      var dicdata = {'screenshot': screenshot_b64, 'api_key': api_key, 'label': label};
+      const data = new URLSearchParams(dicdata);
+      return await fetch(url, {
+        method: 'post',
+        body: data,
+      })
+      .then(response => response.json())
+      .then(data => {
+        return data
+      })
+      .catch(error => console.error(error))
+    }
+
+    async function find_closest_element(test_ai_elem, browser) {
+      var elements = await browser.$$('//*');
+      var best_iou = 0;
+      var selected = await elements[0];
+      for (let i = 0; i < elements.length; i++) {
+        var bbox = await get_bounding_box(elements[i]);
+
+        if (bbox != null) {
+          var iou = _iou_boxes(bbox, test_ai_elem);
+          if (iou > best_iou) {
+            best_iou = iou;
+            selected = await elements[i];
+          }
+        }
+      }
+      return selected;
+    }
+
+    function _iou_boxes(box1, box2) {
+      return _iou(box1['x'], box1['y'], box1['width'], box1['height'], box2['x'], box2['y'], box2['width'], box2['height']);
+    }
+
+    function _iou(x, y, w, h, xx, yy, ww, hh) {
+      return _area_overlap(x, y, w, h, xx, yy, ww, hh) / (
+                  _area(w, h) + _area(ww, hh) - _area_overlap(x, y, w, h, xx, yy, ww, hh));}
+
+    function _area_overlap(x, y, w, h, xx, yy, ww, hh) {
+      var dx = Math.min(x + w, xx + ww) - Math.max(x, xx)
+      var dy = Math.min(y + h, yy + hh) - Math.max(y, yy)
+      if ((dx >= 0) && (dy >= 0))  {
+          return dx * dy } else {
+          return 0}
+    }
+
+    function _area(w, h) {
+      return w * h
+    }
+
+
+    async function test() {
+        const browser = await remote({
+            capabilities: {
+                browserName: 'chrome'
+            }
+        })
+        await browser.url('https://testaistore.com/');
+        var menu_link = await browser.$('[id=menu-item-671]');
+        await ingest_element(browser, menu_link, 'accessories_nav_link_webdriver');
+        var wd_element = await find_element_by_element_name(browser, 'accessories_nav_link_webdriver');
+        await wd_element.click();
+      };
+
+    await test();
+
+..
+
+Ingestion
+^^^^^^^^^
+
+Ingestion consists in the following steps:
+ - Upload a screenshot of the current screen by sending a POST request to :func:`api.v1.backend.upload_screenshot`. Please note we convert the screenshot to base64, that is a requirement.
+ - Extract a bounding box from a Webdriver element
+ - Upload the bounding box for that screenshot by sending the uuid we got back from uploading and providing the bounding box coordinates. We do this by sending a POST request to :func:`api.v1.backend.add_action`
+
+After an element is ingested, you can check the training status at https://sdk.test.ai/training_status . You will only be able to call the classify end point for that element once training is finished.
+
+.. code-block:: javascript
+
+    async function ingest_element(browser, playwright_element, label) {
+      var response = await upload_screenshot(browser, label);
+      if (response.success) {
+        var screenshot_uuid = response.key;
+        await upload_bounding_box(label, screenshot_uuid, playwright_element);
+        console.log('Element ingested');
+      } else {
+        console.error('Failed to upload screenshot to test.ai');
+      }
+    }
+
+    async function upload_screenshot(browser, label) {
+      await browser.saveScreenshot('tmp_screenshot.png');
+      var screenshot_b64 = base64_encode('tmp_screenshot.png');
+      var dicdata = {'api_key': api_key, 'screenshot': screenshot_b64, 'label': label}
+      var url = 'https://sdk.test.ai/upload_screenshot';
+      const data = JSON.stringify(dicdata);
+      var start = performance.now();
+      var res = await fetch(url, {
+        method: 'post',
+        body: data,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        return data
+      })
+      .catch(error => console.error(error));
+      var end = performance.now();
+      console.log('upload time');
+      console.log(end-start);
+      return res;
+    }
+
+    async function upload_bounding_box(label, key, webdriver_element) {
+      var bounding_box = await get_bounding_box(webdriver_element);
+      var dicdata = {
+        'key': key,
+        'api_key': api_key,
+        'label': label,
+        'x': bounding_box['x'] ,
+        'y': bounding_box['y'],
+        'width': bounding_box['width'],
+        'height': bounding_box['height'],
+        'train_if_necessary': true,
+      };
+      var url = 'https://sdk.test.ai/add_action';
+      const data = JSON.stringify(dicdata);
+      return await fetch(url, {
+        method: 'post',
+        body: data,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .catch(error => console.error(error));
+    }
+
+..
+
+Classification
+^^^^^^^^^^^^^^
+Classification consists in visually identifying elements from a screenshot.
+
+The steps are:
+ - Upload a screenshot by sending a POST request to :func:`api.v1.backend.classify`. Please note we convert the screenshot to base64, that is a requirement.
+ - Get a bounding box back from the call to :func:`api.v1.backend.classify`
+ - Match the bounding box to a Webdriver element by iterating over all elements on the page and finding the one with the best IOU score (intersection over union = area overlap)
+ - Return the Webdriver element that was found during matching
+
+This is accomplished by the following code
+
+.. code-block:: javascript
+
+    async function find_element_by_element_name(browser, label) {
+      var url = 'https://sdk.test.ai/classify';
+      await browser.saveScreenshot('tmp_screenshot.png');
+      var screenshot_b64 = base64_encode('tmp_screenshot.png');
+      console.log('screenshot')
+      var res = await classify_backend_call(url, screenshot_b64, api_key, label);
+      console.log(res);
+      if (res.success) {
+        var test_ai_elem = res.elem;
+        console.log('matching')
+        var webdriver_elem = await find_closest_element(test_ai_elem, browser);
+        console.log('Successful classification of element ' + label);
+        return webdriver_elem;
+      } else {
+        throw 'Could not find element, please visit https://sdk.test.ai/label/' + label + ' to add a bounding box to this screen.';
+      }
+    }
+
+    async function classify_backend_call(url, screenshot_b64, api_key, label) {
+      var dicdata = {'screenshot': screenshot_b64, 'api_key': api_key, 'label': label};
+      const data = new URLSearchParams(dicdata);
+      return await fetch(url, {
+        method: 'post',
+        body: data,
+      })
+      .then(response => response.json())
+      .then(data => {
+        return data
+      })
+      .catch(error => console.error(error))
+    }
+
+    async function find_closest_element(test_ai_elem, browser) {
+      var elements = await browser.$$('//*');
+      var best_iou = 0;
+      var selected = await elements[0];
+      for (let i = 0; i < elements.length; i++) {
+        var bbox = await get_bounding_box(elements[i]);
+
+        if (bbox != null) {
+          var iou = _iou_boxes(bbox, test_ai_elem);
+          if (iou > best_iou) {
+            best_iou = iou;
+            selected = await elements[i];
+          }
+        }
+      }
+      return selected;
+    }
+
+    function _iou_boxes(box1, box2) {
+      return _iou(box1['x'], box1['y'], box1['width'], box1['height'], box2['x'], box2['y'], box2['width'], box2['height']);
+    }
+
+    function _iou(x, y, w, h, xx, yy, ww, hh) {
+      return _area_overlap(x, y, w, h, xx, yy, ww, hh) / (
+                  _area(w, h) + _area(ww, hh) - _area_overlap(x, y, w, h, xx, yy, ww, hh));}
+
+    function _area_overlap(x, y, w, h, xx, yy, ww, hh) {
+      var dx = Math.min(x + w, xx + ww) - Math.max(x, xx)
+      var dy = Math.min(y + h, yy + hh) - Math.max(y, yy)
+      if ((dx >= 0) && (dy >= 0))  {
+          return dx * dy } else {
+          return 0}
+    }
+
+    function _area(w, h) {
+      return w * h
+    }
+
+
+..
+
+Notes
+^^^^^
+The part where we match a bounding box to a Webdriver element is non-trivial, and depending on your needs could be side-stepped. If you want to skip it and you have the ability to click directly at coordinates x, y you can do something like the code sample below.
+Please note you need to configure your test to use devtools (Chrome CDP) cf `Webdriver doc <https://webdriver.io/docs/devtools-service>`_
+
+.. code-block:: javascript
+
+    async function find_testai_element_by_element_name(browser, label) {
+      var url = 'https://sdk.test.ai/classify';
+      await browser.saveScreenshot('tmp_screenshot.png');
+      var screenshot_b64 = base64_encode('tmp_screenshot.png');
+      var res = await classify_backend_call(url, screenshot_b64, api_key, label);
+      if (res.success) {
+        var test_ai_elem = res.elem;
+        return test_ai_elem;
+      } else {
+        throw 'Could not find element';
+      }
+    }
+
+    async function coordinate_click(browser, testai_elem) {
+      console.log('clicking')
+      var x = testai_elem.x + testai_elem.width / 2;
+      var y = testai_elem.y + testai_elem.height / 2;
+      await browser.cdp('Input', 'dispatchMouseEvent', {'type': 'mousePressed', 'button': 'left', 'clickCount': 1, 'x': x , 'y': y})
+      await new Promise(r => setTimeout(r, 50));
+      await browser.cdp('Input', 'dispatchMouseEvent', { 'type': 'mouseReleased', 'button': 'left', 'clickCount': 1, 'x': x, 'y': y})
+      console.log('clicked');
+    }
+
+
+    async function test() {
+        const browser = await remote({
+            capabilities: {
+                browserName: 'chrome'
+            },
+        })
+        console.log(await browser.getMetrics())
+        await browser.url('https://testaistore.com/');
+
+        var testai_elem = await find_testai_element_by_element_name(browser, 'accessories_nav_link_webdriver');
+        await coordinate_click(browser, testai_elem);
+
+      };
+
+    await test();
+..

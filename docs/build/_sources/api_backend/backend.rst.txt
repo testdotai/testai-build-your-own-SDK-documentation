@@ -1,0 +1,7 @@
+Backend API documentation
+*************************
+
+.. autofunction:: api.v1.backend.add_action
+.. autofunction:: api.v1.backend.classify
+.. autofunction:: api.v1.backend.check_screenshot_exists
+.. autofunction:: api.v1.backend.upload_screenshot
